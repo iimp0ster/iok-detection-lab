@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# IOK Analysis temporary files
+/tmp/
+/batch_results/
+*.json
+!urls.txt
+!elastic_watcher_iok.json
+
+# IOK Repository (cloned during setup)
+IOK/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Chrome
+chrome_debug.log
+
+# Sensitive
+config.local.py
+*.env
+.env
+
+# Test outputs
+test_*.json
+phish*.json
+output*.json
+iok_event.json

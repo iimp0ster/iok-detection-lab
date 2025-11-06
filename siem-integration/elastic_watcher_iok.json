@@ -1,0 +1,93 @@
+{
+  "trigger": {
+    "schedule": {
+      "interval": "5m"
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "search_type": "query_then_fetch",
+        "indices": [
+          "proxy-*"
+        ],
+        "rest_total_hits_as_int": true,
+        "body": {
+          "size": 50,
+          "query": {
+            "bool": {
+              "must": [
+                {
+                  "range": {
+                    "@timestamp": {
+                      "gte": "now-5m",
+                      "lte": "now"
+                    }
+                  }
+                },
+                {
+                  "bool": {
+                    "should": [
+                      {
+                        "term": {
+                          "url_reputation": "suspicious"
+                        }
+                      },
+                      {
+                        "term": {
+                          "user_reported": true
+                        }
+                      },
+                      {
+                        "query_string": {
+                          "query": "url:(*login* OR *verify* OR *account* OR *secure*) AND url:(*microsoft* OR *paypal* OR *amazon*)"
+                        }
+                      }
+                    ],
+                    "minimum_should_match": 1
+                  }
+                }
+              ],
+              "must_not": [
+                {
+                  "exists": {
+                    "field": "iok.analyzed"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "compare": {
+      "ctx.payload.hits.total": {
+        "gt": 0
+      }
+    }
+  },
+  "actions": {
+    "iok_analysis": {
+      "webhook": {
+        "scheme": "http",
+        "host": "localhost",
+        "port": 5000,
+        "method": "post",
+        "path": "/analyze",
+        "params": {},
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{#ctx.payload.hits.hits}}{ \"url\": \"{{_source.url}}\", \"async\": true }{{/ctx.payload.hits.hits}}"
+      }
+    },
+    "log_detections": {
+      "logging": {
+        "level": "info",
+        "text": "IOK Analysis triggered for {{ctx.payload.hits.total}} suspicious URLs"
+      }
+    }
+  }
+}

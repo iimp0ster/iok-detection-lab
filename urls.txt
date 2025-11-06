@@ -1,0 +1,10 @@
+# Example URL List for IOK Batch Scanner
+# Format: One URL per line, lines starting with # are ignored
+
+# Test with safe sites first
+https://example.com
+https://httpbin.org
+
+# Add your suspicious URLs below
+# https://suspicious-phishing-site.com
+# https://another-phish.net
