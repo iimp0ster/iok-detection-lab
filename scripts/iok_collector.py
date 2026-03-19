@@ -1,182 +1,301 @@
 #!/usr/bin/env python3
 """
-IOK Data Collector - Visits URLs and extracts IOK event schema fields
+IOK Data Collector - Visits URLs and extracts IOK event schema fields.
+
+Integrates with OpsecManager for proxy routing, UA rotation, and
+anti-fingerprinting.  Returns a structured dict on every code path —
+callers never receive None.
 """
 
 import json
+import socket
 import sys
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import time
-import requests
 from urllib.parse import urlparse
 
-def collect_iok_data(url, timeout=10):
+import requests
+import requests.exceptions
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+
+from core.opsec import OpsecManager
+
+
+def _empty_event(url: str) -> dict:
+    """Return a zeroed-out IOK event dict for the given URL."""
+    return {
+        "title": [],
+        "hostname": urlparse(url).netloc,
+        "html": "",
+        "dom": "",
+        "js": [],
+        "css": [],
+        "cookies": [],
+        "headers": [],
+        "requests": [],
+        "forms": [],
+    }
+
+
+def _error_event(url: str, error_type: str, message: str) -> dict:
+    """Return a structured failure dict with error metadata."""
+    event = _empty_event(url)
+    event.update({"url": url, "error": True, "error_type": error_type, "error_message": message})
+    return event
+
+
+def collect_iok_data(url, proxy_args=None, ua=None, delay_ms=0, timeout=10) -> dict:
     """
-    Visit a URL and collect all IOK schema fields
+    Visit a URL and collect all IOK schema fields.
+
+    Args:
+        url:        Target URL to collect data from.
+        proxy_args: List of Chrome argument strings (e.g. from
+                    OpsecManager.get_chromium_args()).  None = no proxy.
+        ua:         User-Agent string override.  None = random UA from pool.
+        delay_ms:   Milliseconds to wait after page load for JS execution.
+                    0 = no extra wait.
+        timeout:    Selenium page-load and requests timeout in seconds.
+
+    Returns:
+        IOK event dict.  Always a dict — never None.
+        On failure the dict contains "error": True, "error_type": str,
+        "error_message": str alongside zeroed-out schema fields.
+        error_type values: "timeout" | "connection" | "blocked"
     """
-    
+
+    # Resolve UA once so both Chrome and requests use the same string
+    resolved_ua = ua or OpsecManager.get_random_ua()
+
+    # Determine proxies for requests library (mirrors Chrome proxy state)
+    _proxies = OpsecManager.get_requests_proxies() if proxy_args else {}
+
+    # ------------------------------------------------------------------
     # Configure headless Chrome
+    # ------------------------------------------------------------------
     chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--ignore-certificate-errors')
-    chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-    
-    # Enable network logging
-    chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
-    
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--ignore-certificate-errors")
+    chrome_options.add_argument(f"--user-agent={resolved_ua}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # Inject caller-supplied proxy/fingerprint args (e.g. from OpsecManager)
+    for arg in (proxy_args or []):
+        chrome_options.add_argument(arg)
+
+    # Enable network logging for request capture
+    chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+
     driver = None
-    
+
     try:
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.set_page_load_timeout(timeout)
-        
-        # Get raw HTML from server first
+        # ------------------------------------------------------------------
+        # 1. Fetch raw server HTML via requests (before browser launch)
+        # ------------------------------------------------------------------
         raw_html = ""
         server_headers = []
         try:
-            response = requests.get(url, timeout=timeout, verify=False, 
-                                   headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            response = requests.get(
+                url,
+                timeout=timeout,
+                verify=False,
+                headers={"User-Agent": resolved_ua},
+                proxies=_proxies,
+            )
+            if response.status_code in (403, 429, 503):
+                return _error_event(
+                    url,
+                    "blocked",
+                    f"HTTP {response.status_code} from server",
+                )
             raw_html = response.text
             server_headers = [f"{k}: {v}" for k, v in response.headers.items()]
-        except:
+        except requests.exceptions.Timeout:
+            return _error_event(url, "timeout", "Initial HTTP request timed out")
+        except requests.exceptions.ConnectionError as exc:
+            return _error_event(url, "connection", str(exc))
+        except Exception:
+            # Non-fatal: continue to browser-based collection
             pass
-        
-        # Visit page with Selenium
-        driver.get(url)
-        time.sleep(3)  # Wait for JS
-        
-        # IOK Event Schema
-        iok_event = {
-            "title": [],
-            "hostname": "",
-            "html": "",
-            "dom": "",
-            "js": [],
-            "css": [],
-            "cookies": [],
-            "headers": [],
-            "requests": []
-        }
-        
+
+        # ------------------------------------------------------------------
+        # 2. Launch headless Chrome
+        # ------------------------------------------------------------------
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.set_page_load_timeout(timeout)
+
+        # Remove navigator.webdriver fingerprint before any page is loaded
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": (
+                    "Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined})"
+                )
+            },
+        )
+
+        # ------------------------------------------------------------------
+        # 3. Navigate
+        # ------------------------------------------------------------------
+        try:
+            driver.get(url)
+        except TimeoutException as exc:
+            return _error_event(url, "timeout", str(exc))
+        except WebDriverException as exc:
+            return _error_event(url, "connection", str(exc))
+
+        # Wait for JS execution
+        if delay_ms > 0:
+            time.sleep(delay_ms / 1000)
+
+        # ------------------------------------------------------------------
+        # 4. Build IOK event
+        # ------------------------------------------------------------------
+        iok_event = _empty_event(url)
+        iok_event["html"] = raw_html
+        iok_event["headers"] = server_headers
+
         # 1. Title
         try:
             iok_event["title"].append(driver.title)
-        except:
+        except Exception:
             pass
-        
-        # 2. Hostname
-        iok_event["hostname"] = urlparse(url).netloc
-        
-        # 3. HTML (raw)
-        iok_event["html"] = raw_html
-        
+
+        # 2. Hostname already set by _empty_event
+
         # 4. DOM (post-JS)
         try:
             iok_event["dom"] = driver.page_source
-        except:
+        except Exception:
             pass
-        
-        # 5. JavaScript
+
+        # 5. JavaScript (inline + external)
         try:
-            scripts = driver.find_elements(By.TAG_NAME, "script")
-            for script in scripts:
+            for script in driver.find_elements(By.TAG_NAME, "script"):
                 inline_js = script.get_attribute("innerHTML")
                 if inline_js and inline_js.strip():
                     iok_event["js"].append(inline_js)
-                
+
                 src = script.get_attribute("src")
                 if src:
                     try:
-                        ext_js = requests.get(src, timeout=5, verify=False).text
+                        ext_js = requests.get(
+                            src, timeout=5, verify=False,
+                            headers={"User-Agent": resolved_ua},
+                            proxies=_proxies,
+                        ).text
                         iok_event["js"].append(ext_js)
-                    except:
+                    except Exception:
                         pass
-        except:
+        except Exception:
             pass
-        
-        # 6. CSS
+
+        # 6. CSS (inline + external)
         try:
-            styles = driver.find_elements(By.TAG_NAME, "style")
-            for style in styles:
+            for style in driver.find_elements(By.TAG_NAME, "style"):
                 css = style.get_attribute("innerHTML")
                 if css and css.strip():
                     iok_event["css"].append(css)
-            
-            links = driver.find_elements(By.CSS_SELECTOR, "link[rel='stylesheet']")
-            for link in links:
+
+            for link in driver.find_elements(By.CSS_SELECTOR, "link[rel='stylesheet']"):
                 href = link.get_attribute("href")
                 if href:
                     try:
-                        ext_css = requests.get(href, timeout=5, verify=False).text
+                        ext_css = requests.get(
+                            href, timeout=5, verify=False,
+                            headers={"User-Agent": resolved_ua},
+                            proxies=_proxies,
+                        ).text
                         iok_event["css"].append(ext_css)
-                    except:
+                    except Exception:
                         pass
-        except:
+        except Exception:
             pass
-        
+
         # 7. Cookies
         try:
-            cookies = driver.get_cookies()
-            for cookie in cookies:
+            for cookie in driver.get_cookies():
                 iok_event["cookies"].append(f"{cookie['name']}={cookie['value']}")
-        except:
+        except Exception:
             pass
-        
-        # 8. Headers
-        iok_event["headers"] = server_headers
-        
-        # 9. Requests
+
+        # 8. Headers already set above
+
+        # 9. Network requests (from Chrome performance log)
         try:
-            logs = driver.get_log('performance')
-            for log in logs:
-                message = json.loads(log['message'])
-                method = message.get('message', {}).get('method', '')
-                
-                if method == 'Network.requestWillBeSent':
-                    request_url = message['message']['params']['request']['url']
-                    if request_url not in iok_event["requests"]:
-                        iok_event["requests"].append(request_url)
-        except:
+            for log in driver.get_log("performance"):
+                message = json.loads(log["message"])
+                if message.get("message", {}).get("method") == "Network.requestWillBeSent":
+                    req_url = message["message"]["params"]["request"]["url"]
+                    if req_url not in iok_event["requests"]:
+                        iok_event["requests"].append(req_url)
+        except Exception:
             pass
-        
+
+        # 10. Forms: POST action endpoints + input field names
+        try:
+            for form in driver.find_elements(By.TAG_NAME, "form"):
+                action = form.get_attribute("action") or ""
+                method = (form.get_attribute("method") or "GET").upper()
+                fields = []
+                for inp in form.find_elements(By.CSS_SELECTOR, "input, select, textarea"):
+                    name = inp.get_attribute("name") or ""
+                    ftype = inp.get_attribute("type") or inp.tag_name
+                    if name:
+                        fields.append({"name": name, "type": ftype})
+                iok_event["forms"].append({"action": action, "method": method, "fields": fields})
+        except Exception:
+            pass
+
         return iok_event
-        
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return None
-        
+
+    except TimeoutException as exc:
+        return _error_event(url, "timeout", str(exc))
+    except (socket.error, OSError) as exc:
+        return _error_event(url, "connection", str(exc))
+    except Exception as exc:
+        return _error_event(url, "connection", str(exc))
+
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                pass
 
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 iok_collector.py <URL> [output.json]")
         sys.exit(1)
-    
+
     url = sys.argv[1]
     output_file = sys.argv[2] if len(sys.argv) > 2 else "iok_event.json"
-    
+
     print(f"[+] Collecting IOK data from: {url}")
-    
+
     event = collect_iok_data(url)
-    
-    if event:
-        with open(output_file, 'w', encoding='utf-8') as f:
+
+    if event.get("error"):
+        print(f"[-] Collection failed ({event['error_type']}): {event['error_message']}")
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(event, f, indent=2, ensure_ascii=False)
-        
-        print(f"[+] Saved to: {output_file}")
-        print(f"[+] JS files: {len(event['js'])}, CSS files: {len(event['css'])}")
-        print(f"[+] Requests: {len(event['requests'])}, Cookies: {len(event['cookies'])}")
-    else:
-        print("[-] Failed to collect data")
+        print(f"[+] Error event saved to: {output_file}")
         sys.exit(1)
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(event, f, indent=2, ensure_ascii=False)
+
+    print(f"[+] Saved to: {output_file}")
+    print(f"[+] JS files: {len(event['js'])}, CSS files: {len(event['css'])}")
+    print(f"[+] Requests: {len(event['requests'])}, Cookies: {len(event['cookies'])}")
+    print(f"[+] Forms: {len(event['forms'])}")
 
 
 if __name__ == "__main__":
