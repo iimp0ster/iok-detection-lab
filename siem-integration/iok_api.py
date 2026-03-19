@@ -4,7 +4,7 @@ IOK API Server - REST API for IOK analysis
 Receives URLs, runs IOK collector and detector, returns results
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 import subprocess
 import json
 import os
@@ -25,12 +25,17 @@ WORK_DIR = os.getenv('IOK_WORK_DIR', '/tmp/iok_analysis')
 MAX_WORKERS = int(os.getenv('IOK_MAX_WORKERS', '3'))
 ANALYSIS_TIMEOUT = int(os.getenv('IOK_TIMEOUT', '60'))
 
+# UI directory (relative to this file)
+UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ui')
+
 # Create work directory
 Path(WORK_DIR).mkdir(parents=True, exist_ok=True)
 
 # Analysis queue for rate limiting
 analysis_queue = queue.Queue()
 results_cache = {}
+# Maps batch_id -> list of job_ids
+batch_jobs = {}
 
 
 def worker():
@@ -130,19 +135,43 @@ def analyze_url(url, job_id):
     # if os.path.exists(det_file):
     #     os.remove(det_file)
     
+    level_order = {'high': 3, 'medium': 2, 'med': 2, 'low': 1, 'none': 0}
+    top_level = 'none'
+    for d in detections:
+        lvl = d.get('level', 'low').lower()
+        if level_order.get(lvl, 0) > level_order.get(top_level, 0):
+            top_level = lvl
+
     return {
         'success': True,
         'url': url,
         'detections': detections,
         'detection_count': len(detections),
-        'threat_level': max([d.get('level', 'low') for d in detections], default='none'),
+        'threat_level': top_level,
         'hostname': event_data.get('hostname', ''),
         'title': event_data.get('title', []),
         'js_count': len(event_data.get('js', [])),
+        'css_count': len(event_data.get('css', [])),
+        'cookies_count': len(event_data.get('cookies', [])),
+        'forms_count': len(event_data.get('forms', [])),
         'requests_count': len(event_data.get('requests', [])),
+        'forms': event_data.get('forms', []),
+        'requests_detail': event_data.get('requests', []),
         'analysis_time': time.time() - start_time,
         'timestamp': datetime.now().isoformat()
     }
+
+
+@app.route('/')
+def ui_index():
+    """Serve the UI index page"""
+    return send_from_directory(UI_DIR, 'index.html')
+
+
+@app.route('/ui/<path:filename>')
+def ui_static(filename):
+    """Serve UI static files"""
+    return send_from_directory(UI_DIR, filename)
 
 
 @app.route('/health', methods=['GET'])
@@ -230,21 +259,73 @@ def batch():
     
     if not isinstance(urls, list) or len(urls) == 0:
         return jsonify({'error': 'urls must be a non-empty array'}), 400
-    
-    if len(urls) > 10:
-        return jsonify({'error': 'Maximum 10 URLs per batch request'}), 400
-    
-    # Queue all URLs
+
+    if len(urls) > 100:
+        return jsonify({'error': 'Maximum 100 URLs per batch request'}), 400
+
+    # Generate a batch_id and queue all URLs
+    batch_id = hashlib.md5(f"batch{time.time()}".encode()).hexdigest()
     job_ids = []
+    batch_job_list = []
     for url in urls:
         job_id = hashlib.md5(f"{url}{time.time()}".encode()).hexdigest()
         analysis_queue.put((url, job_id))
         job_ids.append({'url': url, 'job_id': job_id})
-    
+        batch_job_list.append(job_id)
+
+    batch_jobs[batch_id] = batch_job_list
+
     return jsonify({
+        'batch_id': batch_id,
         'jobs': job_ids,
         'message': 'Batch analysis queued'
     }), 202
+
+
+@app.route('/history', methods=['GET'])
+def history():
+    """Return recent completed analysis results"""
+    completed = []
+    for jid, v in results_cache.items():
+        if v.get('status') == 'complete' and v.get('result'):
+            entry = {'job_id': jid}
+            entry.update(v['result'])
+            completed.append(entry)
+    completed.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    return jsonify(completed[:200])
+
+
+@app.route('/stream/batch/<batch_id>', methods=['GET'])
+def stream_batch(batch_id):
+    """SSE endpoint: stream job results as they complete for a batch"""
+    def generate():
+        job_ids = batch_jobs.get(batch_id, [])
+        if not job_ids:
+            yield f"data: {json.dumps({'error': 'batch not found'})}\n\n"
+            return
+        seen = set()
+        while len(seen) < len(job_ids):
+            for jid in job_ids:
+                if jid in seen:
+                    continue
+                entry = results_cache.get(jid, {})
+                if entry.get('status') in ('complete', 'error'):
+                    seen.add(jid)
+                    payload = {'job_id': jid, 'status': entry.get('status')}
+                    if entry.get('result'):
+                        payload.update(entry['result'])
+                    elif entry.get('error'):
+                        payload['error'] = entry['error']
+                    yield f"data: {json.dumps(payload)}\n\n"
+            if len(seen) < len(job_ids):
+                time.sleep(0.5)
+        yield f"data: {json.dumps({'done': True, 'total': len(job_ids)})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        content_type='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+    )
 
 
 @app.route('/rules/stats', methods=['GET'])
