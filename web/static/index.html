@@ -443,6 +443,183 @@
       background: rgba(255,179,0,0.25);
       color: var(--amber);
     }
+
+    /* ------------------------------------------------------------------ */
+    /*  Sidebar sub-panels (Branch 05)                                      */
+    /* ------------------------------------------------------------------ */
+    .sidebar-panel {
+      display: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .sidebar-panel.open { display: block; }
+
+    .opanel-section {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255,179,0,0.08);
+    }
+    .opanel-label {
+      font-size: var(--sz-xs);
+      color: var(--border-hi);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .opanel-status-row {
+      display: flex; align-items: center; gap: 7px;
+      font-size: var(--sz-sm); color: var(--amber); font-weight: 500;
+    }
+    .opanel-dot {
+      width: 7px; height: 7px; flex-shrink: 0;
+      background: #333;
+    }
+    .opanel-dot.online  { background: var(--amber); box-shadow: 0 0 5px var(--amber); }
+    .opanel-dot.offline { background: #444; }
+    .opanel-detail {
+      font-size: var(--sz-xs); color: var(--amber-text);
+      margin: 2px 0 0 14px; letter-spacing: 0.04em;
+    }
+    .opanel-actions {
+      display: flex; gap: 6px; margin-top: 8px;
+    }
+    .obtn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--amber-text);
+      font-family: var(--font); font-size: var(--sz-xs);
+      letter-spacing: 0.08em; padding: 3px 8px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .obtn:hover {
+      color: var(--amber); border-color: var(--border-hi);
+      box-shadow: 0 0 6px var(--amber-glow);
+    }
+    .vpn-warning {
+      margin-top: 8px; padding: 5px 8px;
+      font-size: var(--sz-xs);
+      border: 1px solid rgba(255,100,0,0.5);
+      color: #ff9800;
+      background: rgba(255,100,0,0.06);
+      letter-spacing: 0.06em;
+    }
+
+    /* Toggle switch (CSS-only) */
+    .opanel-toggle-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toggle-switch {
+      position: relative; display: inline-block;
+      width: 38px; height: 20px; flex-shrink: 0;
+    }
+    .toggle-switch input { display: none; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: rgba(255,179,0,0.08);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track {
+      background: rgba(255,179,0,0.20);
+      border-color: var(--amber);
+      box-shadow: 0 0 8px var(--amber-glow);
+    }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 12px; height: 12px;
+      background: rgba(255,179,0,0.35);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track .toggle-thumb {
+      transform: translateX(18px);
+      background: var(--amber);
+    }
+    .toggle-state-label {
+      font-size: var(--sz-xs); color: var(--amber-text);
+      letter-spacing: 0.10em; min-width: 24px;
+    }
+
+    /* Range slider */
+    .opanel-slider-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .opanel-range {
+      -webkit-appearance: none; flex: 1;
+      height: 3px; background: var(--border); outline: none; cursor: pointer;
+    }
+    .opanel-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 8px; height: 18px;
+      background: var(--amber); cursor: pointer;
+    }
+    .opanel-range::-moz-range-thumb {
+      width: 8px; height: 18px; border: none;
+      background: var(--amber); cursor: pointer;
+    }
+    .opanel-range-val {
+      font-size: var(--sz-xs); color: var(--amber);
+      min-width: 36px; text-align: right; letter-spacing: 0.04em;
+    }
+    .opanel-select {
+      width: 100%;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      color: var(--amber-text); font-family: var(--font);
+      font-size: var(--sz-sm); padding: 4px 8px;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .opanel-select:focus { border-color: var(--amber); outline: none; }
+
+    /* Header chip states */
+    .chip.rotating {
+      border-color: var(--amber); color: var(--amber);
+      animation: flicker 0.4s linear infinite;
+    }
+    .chip.success {
+      border-color: #00c853; color: #00c853;
+      box-shadow: 0 0 6px rgba(0,200,83,0.3);
+    }
+    .chip.fail {
+      border-color: #ff1744; color: #ff1744;
+      box-shadow: 0 0 6px rgba(255,23,68,0.3);
+    }
+
+    /* Scan form + pre-check */
+    .scan-form { padding: 0 0 20px; }
+    .scan-form-row {
+      display: flex; gap: 8px; align-items: stretch;
+    }
+    .scan-url-input {
+      flex: 1; background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--amber); font-family: var(--font);
+      font-size: var(--sz-base); padding: 9px 12px;
+      transition: border-color 0.15s;
+    }
+    .scan-url-input:focus  { border-color: var(--amber); outline: none; }
+    .scan-url-input::placeholder { color: rgba(255,179,0,0.25); }
+    .scan-btn {
+      background: transparent;
+      border: 1px solid var(--amber-dim);
+      color: var(--amber-text); font-family: var(--font);
+      font-size: var(--sz-sm); letter-spacing: 0.12em;
+      padding: 9px 20px; cursor: pointer; white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .scan-btn:hover { color: var(--amber); border-color: var(--amber); box-shadow: 0 0 10px var(--amber-glow); }
+    .scan-btn.vpn-ok    { border-color: var(--amber); color: var(--amber); }
+    .scan-btn.vpn-down  { border-color: #ff6b6b; color: #ff6b6b; }
+    .scan-btn.vpn-checking { opacity: 0.55; pointer-events: none; }
+    .precheck-msg {
+      margin-top: 7px; padding: 5px 10px;
+      font-size: var(--sz-xs); letter-spacing: 0.06em;
+      border: 1px solid var(--border);
+      background: rgba(255,179,0,0.03);
+    }
+    .precheck-msg.ok   { border-color: rgba(0,200,83,0.45);  color: #4caf50; }
+    .precheck-msg.warn { border-color: rgba(255,100,0,0.45); color: #ff9800; }
+    .precheck-msg.err  { border-color: rgba(255,23,68,0.50); color: #ff5252; }
   </style>
 </head>
 <body>
@@ -464,11 +641,7 @@
     <div class="h-sep"></div>
 
     <div class="country-chips" id="country-chips">
-      <button class="chip" data-cc="NL" title="Connect NL">NL</button>
-      <button class="chip" data-cc="CH" title="Connect CH">CH</button>
-      <button class="chip" data-cc="IS" title="Connect IS">IS</button>
-      <button class="chip" data-cc="SE" title="Connect SE">SE</button>
-      <button class="chip" data-cc="RO" title="Connect RO">RO</button>
+      <!-- rendered by Chips.render() from localStorage (default: NL CH IS SE) -->
     </div>
 
     <div class="h-sep"></div>
@@ -492,12 +665,74 @@
       <button class="sidebar-item active" id="nav-opsec" data-panel="opsec">
         OPSEC
       </button>
+
+      <div class="sidebar-panel open" id="sidebar-panel-opsec">
+
+        <div class="opanel-section">
+          <div class="opanel-status-row">
+            <span class="opanel-dot offline" id="op-dot"></span>
+            <span id="op-state-text">DISCONNECTED</span>
+          </div>
+          <div class="opanel-detail" id="op-server">—</div>
+          <div class="opanel-detail" id="op-exit">Exit: —</div>
+          <div class="opanel-actions">
+            <button class="obtn" id="btn-verify-ip">[ Verify IP ]</button>
+            <button class="obtn" id="btn-sidebar-rotate">[ Rotate ]</button>
+          </div>
+          <div class="vpn-warning" id="vpn-warning" style="display:none">
+            &#9888; VPN ENABLED BUT DISCONNECTED
+          </div>
+        </div>
+
+        <div class="opanel-section">
+          <div class="opanel-label">Route via VPN</div>
+          <div class="opanel-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-use-vpn">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <span class="toggle-state-label" id="label-use-vpn">OFF</span>
+          </div>
+        </div>
+
+        <div class="opanel-section">
+          <div class="opanel-label">Exit Country</div>
+          <select id="select-country" class="opanel-select">
+            <option value="">Any</option>
+          </select>
+        </div>
+
+        <div class="opanel-section">
+          <div class="opanel-label">Rotate per scan</div>
+          <div class="opanel-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-rotate-per-scan">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <span class="toggle-state-label" id="label-rotate-per-scan">OFF</span>
+          </div>
+        </div>
+
+        <div class="opanel-section">
+          <div class="opanel-label">Scan delay (ms)</div>
+          <div class="opanel-slider-row">
+            <input type="range" id="range-delay" min="0" max="5000" step="100"
+                   value="0" class="opanel-range">
+            <span class="opanel-range-val" id="val-delay">0</span>
+          </div>
+        </div>
+
+      </div>
+
       <button class="sidebar-item" id="nav-hunt" data-panel="hunt">
         HUNT
       </button>
+      <div class="sidebar-panel" id="sidebar-panel-hunt"></div>
+
       <button class="sidebar-item" id="nav-rules" data-panel="rules">
         RULES
       </button>
+      <div class="sidebar-panel" id="sidebar-panel-rules"></div>
 
       <div class="sidebar-spacer"></div>
 
@@ -527,12 +762,19 @@
         </button>
       </div>
 
-      <!-- Tab panels (populated by Branch 05/06) -->
+      <!-- Tab panels -->
       <div class="tab-panel active" id="panel-single" role="tabpanel">
-        <div class="panel-placeholder">
-          <div class="big">▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒</div>
-          SINGLE SCAN PANEL<br>
-          BRANCH 05
+        <div class="scan-form">
+          <div class="scan-form-row">
+            <input type="text" id="input-url" class="scan-url-input"
+                   placeholder="https://suspicious-site.com"
+                   spellcheck="false" autocomplete="off">
+            <button id="btn-scan" class="scan-btn">&#9654; SCAN</button>
+          </div>
+          <div id="precheck-msg" class="precheck-msg" style="display:none"></div>
+        </div>
+        <div id="scan-result-area">
+          <!-- scan results — Branch 06 -->
         </div>
       </div>
 
@@ -623,29 +865,34 @@
       });
     });
 
-    /* ---- Sidebar nav ---- */
+    /* ---- Sidebar nav — show/hide sub-panels ---- */
     document.querySelectorAll('.sidebar-item').forEach(item => {
       item.addEventListener('click', () => {
+        const panelId = 'sidebar-panel-' + item.dataset.panel;
+        const isOpen  = document.getElementById(panelId)?.classList.contains('open');
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
+        document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('open'));
+        if (!isOpen) {
+          item.classList.add('active');
+          document.getElementById(panelId)?.classList.add('open');
+        }
         flicker(item);
       });
     });
 
-    /* ---- Country chip connect (stub — Branch 05 wires real call) ---- */
-    document.querySelectorAll('.chip[data-cc]').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const cc = chip.dataset.cc;
-        flicker(chip);
-        // POST /api/opsec/connect wired in Branch 05
-        console.debug('[opsec] chip connect:', cc);
-      });
-    });
-
-    /* ---- Rotate button (stub) ---- */
+    /* ---- Rotate button ---- */
     document.getElementById('btn-rotate').addEventListener('click', () => {
-      flicker(document.getElementById('btn-rotate'));
-      console.debug('[opsec] rotate triggered');
+      const btn = document.getElementById('btn-rotate');
+      btn.disabled = true;
+      flicker(btn);
+      fetch('/api/opsec/rotate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+      })
+      .then(r => r.json())
+      .then(data => { btn.disabled = false; if (data.success) pollOpsecStatus(); })
+      .catch(() => { btn.disabled = false; });
     });
 
     /* ---- Poll opsec status every 10s ---- */
@@ -653,18 +900,17 @@
       const dot   = document.getElementById('vpn-dot');
       const ipEl  = document.getElementById('vpn-ip');
       const sipEl = document.getElementById('status-ip');
-
       const connected = data && data.connected;
       dot.classList.toggle('online',  connected);
       dot.classList.toggle('offline', !connected);
       pulse(dot);
-
       const ip = (data && data.exit_ip) ? data.exit_ip : '——';
       if (ipEl.textContent !== ip) {
         ipEl.textContent  = ip;
         sipEl.textContent = ip;
         flicker(ipEl);
       }
+      if (data) OpsecPanel.updatePanel(data);
     }
 
     function pollOpsecStatus() {
@@ -688,8 +934,273 @@
         .catch(() => {});
     }
 
+    /* ================================================================== */
+    /*  Chips — localStorage-backed header quick-switch strip              */
+    /* ================================================================== */
+    const Chips = (() => {
+      const DEFAULTS = ['NL', 'CH', 'IS', 'SE'];
+      const KEY = 'opsec.chips';
+
+      function load() {
+        try { return JSON.parse(localStorage.getItem(KEY)) || DEFAULTS; }
+        catch { return DEFAULTS; }
+      }
+      function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); }
+
+      function render() {
+        const container = document.getElementById('country-chips');
+        container.innerHTML = '';
+        load().forEach(cc => {
+          const btn = document.createElement('button');
+          btn.className = 'chip';
+          btn.dataset.cc = cc;
+          btn.title = 'Rotate to ' + cc + ' (dblclick to remove)';
+          btn.textContent = cc;
+          btn.addEventListener('click', () => rotate(cc, btn));
+          btn.addEventListener('dblclick', e => { e.stopPropagation(); removeChip(cc); });
+          container.appendChild(btn);
+        });
+      }
+
+      function removeChip(cc) {
+        save(load().filter(c => c !== cc));
+        render();
+      }
+
+      function rotate(cc, btn) {
+        btn.classList.add('rotating');
+        btn.disabled = true;
+        fetch('/api/opsec/rotate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({country: cc})
+        })
+        .then(r => r.json())
+        .then(data => {
+          btn.classList.remove('rotating');
+          btn.disabled = false;
+          if (data.success) {
+            btn.classList.add('success');
+            setTimeout(() => btn.classList.remove('success'), 2000);
+            pollOpsecStatus();
+          } else {
+            btn.classList.add('fail');
+            setTimeout(() => btn.classList.remove('fail'), 2000);
+          }
+        })
+        .catch(() => {
+          btn.classList.remove('rotating');
+          btn.disabled = false;
+          btn.classList.add('fail');
+          setTimeout(() => btn.classList.remove('fail'), 2000);
+        });
+      }
+
+      return { render, load, save };
+    })();
+
+    /* ================================================================== */
+    /*  OpsecPanel — sidebar OPSEC controls                                */
+    /* ================================================================== */
+    const OpsecPanel = (() => {
+      let _lastStatus = null;
+
+      function loadCountries() {
+        fetch('/api/opsec/countries')
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data) return;
+            const sel = document.getElementById('select-country');
+            const current = sel.value;
+            while (sel.options.length > 1) sel.remove(1);
+            (data.countries || []).forEach(cc => {
+              const opt = document.createElement('option');
+              opt.value = cc; opt.textContent = cc;
+              sel.appendChild(opt);
+            });
+            if (current) sel.value = current;
+          })
+          .catch(() => {});
+      }
+
+      function updatePanel(data) {
+        _lastStatus = data;
+        const dot       = document.getElementById('op-dot');
+        const stateText = document.getElementById('op-state-text');
+        const serverEl  = document.getElementById('op-server');
+        const exitEl    = document.getElementById('op-exit');
+        const warning   = document.getElementById('vpn-warning');
+        const useVpn    = document.getElementById('toggle-use-vpn')?.checked;
+        const connected = data.connected;
+
+        dot.className = 'opanel-dot ' + (connected ? 'online' : 'offline');
+        const cc  = data.country_code || '';
+        const srv = data.server || '—';
+        stateText.textContent = connected ? ('CONNECTED \u00B7 ' + cc) : 'DISCONNECTED';
+        serverEl.textContent  = srv;
+        exitEl.textContent    = 'Exit: ' + (data.exit_ip || '—');
+        warning.style.display = (useVpn && !connected) ? '' : 'none';
+
+        VpnState.updateScanBtn(data);
+      }
+
+      document.getElementById('btn-verify-ip').addEventListener('click', () => {
+        const btn = document.getElementById('btn-verify-ip');
+        btn.textContent = '[ \u2026 ]'; btn.disabled = true;
+        fetch('/api/opsec/status')
+          .then(r => r.json())
+          .then(data => {
+            btn.disabled = false; btn.textContent = '[ Verify IP ]';
+            const cc = data.country_code || '';
+            const selCC = document.getElementById('select-country').value;
+            if (data.connected && selCC && cc !== selCC) {
+              btn.textContent = '[ \u26A0 MISMATCH ]';
+              setTimeout(() => { btn.textContent = '[ Verify IP ]'; }, 3000);
+            }
+            updatePanel(data);
+            pollOpsecStatus();
+          })
+          .catch(() => { btn.disabled = false; btn.textContent = '[ Verify IP ]'; });
+      });
+
+      document.getElementById('btn-sidebar-rotate').addEventListener('click', () => {
+        const country = document.getElementById('select-country').value || null;
+        const btn = document.getElementById('btn-sidebar-rotate');
+        btn.textContent = '[ \u2026 ]'; btn.disabled = true;
+        fetch('/api/opsec/rotate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(country ? {country} : {})
+        })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false; btn.textContent = '[ Rotate ]';
+          if (data.success) pollOpsecStatus();
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = '[ Rotate ]'; });
+      });
+
+      document.getElementById('toggle-use-vpn').addEventListener('change', function () {
+        document.getElementById('label-use-vpn').textContent = this.checked ? 'ON' : 'OFF';
+        localStorage.setItem('opsec.use_vpn', this.checked);
+        if (_lastStatus) updatePanel(_lastStatus);
+        VpnState.checkAndUpdate();
+      });
+
+      document.getElementById('toggle-rotate-per-scan').addEventListener('change', function () {
+        document.getElementById('label-rotate-per-scan').textContent = this.checked ? 'ON' : 'OFF';
+        localStorage.setItem('opsec.rotate_per_scan', this.checked);
+      });
+
+      document.getElementById('range-delay').addEventListener('input', function () {
+        document.getElementById('val-delay').textContent = this.value;
+        localStorage.setItem('opsec.delay_ms', this.value);
+      });
+
+      function restoreSettings() {
+        const useVpn       = localStorage.getItem('opsec.use_vpn') === 'true';
+        const rotatePerScan= localStorage.getItem('opsec.rotate_per_scan') === 'true';
+        const delay        = parseInt(localStorage.getItem('opsec.delay_ms') || '0', 10);
+
+        const tVpn = document.getElementById('toggle-use-vpn');
+        tVpn.checked = useVpn;
+        document.getElementById('label-use-vpn').textContent = useVpn ? 'ON' : 'OFF';
+
+        const tRot = document.getElementById('toggle-rotate-per-scan');
+        tRot.checked = rotatePerScan;
+        document.getElementById('label-rotate-per-scan').textContent = rotatePerScan ? 'ON' : 'OFF';
+
+        const slider = document.getElementById('range-delay');
+        slider.value = delay;
+        document.getElementById('val-delay').textContent = delay;
+      }
+
+      return { loadCountries, updatePanel, restoreSettings };
+    })();
+
+    /* ================================================================== */
+    /*  VpnState — pre-scan VPN confirmation                               */
+    /* ================================================================== */
+    const VpnState = (() => {
+      function useVpnEnabled() {
+        return document.getElementById('toggle-use-vpn')?.checked;
+      }
+
+      function updateScanBtn(statusData) {
+        const btn = document.getElementById('btn-scan');
+        const msg = document.getElementById('precheck-msg');
+        if (!btn || !msg) return;
+
+        if (!useVpnEnabled()) {
+          btn.textContent = '\u25BA SCAN';
+          btn.className   = 'scan-btn';
+          msg.style.display = 'none';
+          return;
+        }
+
+        const cc = statusData.country_code || '';
+        if (!statusData.connected) {
+          btn.textContent   = '\u26A0 VPN DOWN \u2014 scan anyway?';
+          btn.className     = 'scan-btn vpn-down';
+          msg.className     = 'precheck-msg warn';
+          msg.textContent   = 'VPN is enabled but not connected. Traffic will NOT be proxied.';
+          msg.style.display = '';
+        } else if (!statusData.socks5_available) {
+          btn.textContent   = '\u25BA SCAN';
+          btn.className     = 'scan-btn vpn-down';
+          msg.className     = 'precheck-msg err';
+          msg.textContent   = 'SOCKS5 not reachable on port 1080 \u2014 proxy unavailable.';
+          msg.style.display = '';
+        } else {
+          btn.textContent   = '\u25BA SCAN via ' + (cc || 'VPN');
+          btn.className     = 'scan-btn vpn-ok';
+          msg.style.display = 'none';
+        }
+      }
+
+      function checkAndUpdate() {
+        if (!useVpnEnabled()) {
+          updateScanBtn({connected: false, socks5_available: false});
+          return;
+        }
+        const btn = document.getElementById('btn-scan');
+        if (btn) { btn.className = 'scan-btn vpn-checking'; btn.textContent = '\u27F3 CHECKING\u2026'; }
+        fetch('/api/opsec/status')
+          .then(r => r.json())
+          .then(data => updateScanBtn(data))
+          .catch(() => {
+            if (btn) { btn.className = 'scan-btn vpn-down'; btn.textContent = '\u26A0 VPN CHECK FAILED'; }
+          });
+      }
+
+      // Scan button click → dispatch iok:scan-submit for Branch 06 to handle
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('btn-scan');
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+          const url = document.getElementById('input-url')?.value.trim();
+          if (!url) return;
+          document.dispatchEvent(new CustomEvent('iok:scan-submit', {
+            detail: {
+              url,
+              use_vpn:         useVpnEnabled(),
+              target_country:  document.getElementById('select-country')?.value || null,
+              rotate_per_scan: document.getElementById('toggle-rotate-per-scan')?.checked,
+              delay_ms:        parseInt(document.getElementById('range-delay')?.value || '0', 10),
+              vpn_confirmed:   btn.classList.contains('vpn-down'),
+            }
+          }));
+        });
+      });
+
+      return { updateScanBtn, checkAndUpdate };
+    })();
+
     /* ---- Bootstrap ---- */
     document.addEventListener('DOMContentLoaded', () => {
+      Chips.render();
+      OpsecPanel.restoreSettings();
+      OpsecPanel.loadCountries();
       pollOpsecStatus();
       loadRulesCount();
       setInterval(pollOpsecStatus, 10000);
