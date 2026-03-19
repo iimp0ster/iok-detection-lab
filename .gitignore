@@ -44,6 +44,9 @@ Thumbs.db
 # Chrome
 chrome_debug.log
 
+# Database
+*.db
+
 # Sensitive
 config.local.py
 *.env
