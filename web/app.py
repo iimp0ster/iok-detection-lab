@@ -15,6 +15,12 @@ Endpoints
   GET  /api/rules/stats             → IOK rule count
   GET  /api/health                  → Health / queue depth
 
+  GET  /api/opsec/status            → VPN status (ProtonVPN)
+  POST /api/opsec/rotate            → Rotate VPN server { country? }
+  POST /api/opsec/connect           → Connect to country { country }
+  POST /api/opsec/disconnect        → Disconnect VPN
+  GET  /api/opsec/countries         → Available country codes
+
 Environment variables
 ---------------------
   IOK_DB           Path to SQLite DB   (default: scans.db next to this file)
@@ -66,7 +72,7 @@ app = Flask(__name__, static_folder=None)
 CORS(app)
 
 # ── core services ─────────────────────────────────────────────────────────── #
-opsec  = OpsecManager()    # stub mode by default (no VPN profiles configured)
+opsec   = OpsecManager()    # stub mode by default (no VPN profiles configured)
 ua_pool = UAPool()
 engine  = BatchEngine(
     db_path=DB_PATH,
@@ -111,9 +117,8 @@ def api_scan():
     if not url:
         return jsonify({"error": "url is required"}), 400
 
-    # Re-use BatchEngine's single-URL scanner directly
     import hashlib
-    scan_id = hashlib.sha256(f"{url}{time.time()}".encode()).hexdigest()[:32]
+    scan_id   = hashlib.sha256(f"{url}{time.time()}".encode()).hexdigest()[:32]
     exit_info = opsec.get_current_exit()
     ua        = ua_pool.get()
 
@@ -194,7 +199,7 @@ def api_batch_stream(batch_id):
         stream_with_context(generate()),
         content_type="text/event-stream",
         headers={
-            "Cache-Control":    "no-cache",
+            "Cache-Control":     "no-cache",
             "X-Accel-Buffering": "no",
         },
     )
@@ -216,8 +221,8 @@ def api_batch_status(batch_id):
         ).fetchall()
         con.close()
         return jsonify({
-            "batch":  dict(batch),
-            "scans":  [dict(s) for s in scans],
+            "batch": dict(batch),
+            "scans": [dict(s) for s in scans],
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -255,6 +260,75 @@ def api_rules_stats():
         return jsonify({"rules_directory": RULES_PATH, "rule_count": count})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+# ── opsec (ProtonVPN) ─────────────────────────────────────────────────────── #
+
+@app.route("/api/opsec/status", methods=["GET"])
+def opsec_status():
+    """
+    GET /api/opsec/status
+    Returns full VPN status.  Called every 10 s by UI — must be fast.
+    """
+    return jsonify(opsec.get_status())
+
+
+@app.route("/api/opsec/rotate", methods=["POST"])
+def opsec_rotate():
+    """
+    POST /api/opsec/rotate
+    Body: { "country"?: "NL" }
+    Returns: { success, country_code, exit_ip }
+    """
+    data    = request.get_json(silent=True) or {}
+    country = data.get("country") or None
+    try:
+        success = opsec.rotate_server(country=country)
+        status  = opsec.get_status()
+        return jsonify({
+            "success":      success,
+            "country_code": status.get("country_code", ""),
+            "exit_ip":      status.get("exit_ip", ""),
+            "server":       status.get("server", ""),
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@app.route("/api/opsec/connect", methods=["POST"])
+def opsec_connect():
+    """
+    POST /api/opsec/connect
+    Body: { "country": "NL" }
+    """
+    data    = request.get_json(silent=True) or {}
+    country = data.get("country", "").strip()
+    if not country:
+        return jsonify({"error": "country is required"}), 400
+    try:
+        success = opsec.connect(country)
+        return jsonify({"success": success, **opsec.get_status()})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/opsec/disconnect", methods=["POST"])
+def opsec_disconnect():
+    """POST /api/opsec/disconnect"""
+    try:
+        success = opsec.disconnect()
+        return jsonify({"success": success, **opsec.get_status()})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/opsec/countries", methods=["GET"])
+def opsec_countries():
+    """
+    GET /api/opsec/countries
+    Returns: { countries: [...] }  — cached 5 min in OpsecManager
+    """
+    return jsonify({"countries": opsec.get_available_countries()})
 
 
 # ── entry point ───────────────────────────────────────────────────────────── #

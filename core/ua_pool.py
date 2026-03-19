@@ -45,6 +45,11 @@ def _label(ua: str) -> str:
     return "Unk"
 
 
+def get_random_ua() -> str:
+    """Return a randomly selected UA string from the default pool."""
+    return random.choice(_DEFAULT_POOL)
+
+
 class UAPool:
     """
     Thread-safe pool of user-agent strings.
