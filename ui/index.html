@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IOK Hunt Panel</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
   <header class="app-header">
@@ -88,15 +88,15 @@
           <input id="delay-ms" type="number" value="1500" min="0" step="100" class="num-input">
         </label>
         <label class="toggle-label">VPN
-          <input id="vpn-toggle" type="checkbox">
+          <input id="vpn-toggle" type="checkbox" checked>
           <span class="toggle-pill"></span>
         </label>
         <div class="rotate-group">
           <span class="rotate-label">Rotate:</span>
-          <label><input type="radio" name="rotate" value="none" checked> Off</label>
-          <label><input type="radio" name="rotate" value="per_scan"> Per scan</label>
-          <label><input type="radio" name="rotate" value="every_n"> Every 5</label>
-          <label><input type="radio" name="rotate" value="per_batch"> Per batch</label>
+          <label><input type="radio" name="rotate" value="off" checked> Off</label>
+          <label><input type="radio" name="rotate" value="per-scan"> Per scan</label>
+          <label><input type="radio" name="rotate" value="every-5"> Every 5</label>
+          <label><input type="radio" name="rotate" value="per-batch"> Per batch</label>
         </div>
       </div>
 
@@ -142,8 +142,8 @@
               <th>URL</th>
               <th>VERDICT</th>
               <th>MATCHES</th>
-              <th>EXIT</th>
-              <th>MS</th>
+              <th>VPN</th>
+              <th>UA</th>
             </tr>
           </thead>
           <tbody id="history-body"></tbody>
@@ -153,6 +153,6 @@
     </div>
   </section>
 
-  <script src="/static/app.js"></script>
+  <script src="/ui/app.js"></script>
 </body>
 </html>

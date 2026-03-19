@@ -20,7 +20,9 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-from core.opsec import OpsecManager
+from core.ua_pool import get_random_ua as _get_random_ua
+
+_SOCKS5_PROXY = "socks5h://127.0.0.1:1080"
 
 
 def _empty_event(url: str) -> dict:
@@ -67,10 +69,10 @@ def collect_iok_data(url, proxy_args=None, ua=None, delay_ms=0, timeout=10) -> d
     """
 
     # Resolve UA once so both Chrome and requests use the same string
-    resolved_ua = ua or OpsecManager.get_random_ua()
+    resolved_ua = ua or _get_random_ua()
 
     # Determine proxies for requests library (mirrors Chrome proxy state)
-    _proxies = OpsecManager.get_requests_proxies() if proxy_args else {}
+    _proxies = {"http": _SOCKS5_PROXY, "https": _SOCKS5_PROXY} if proxy_args else {}
 
     # ------------------------------------------------------------------
     # Configure headless Chrome
@@ -229,11 +231,13 @@ def collect_iok_data(url, proxy_args=None, ua=None, delay_ms=0, timeout=10) -> d
 
         # 9. Network requests (from Chrome performance log)
         try:
-            for log in driver.get_log("performance"):
-                message = json.loads(log["message"])
+            seen_urls: set = set()
+            for entry in driver.get_log("performance"):
+                message = json.loads(entry["message"])
                 if message.get("message", {}).get("method") == "Network.requestWillBeSent":
                     req_url = message["message"]["params"]["request"]["url"]
-                    if req_url not in iok_event["requests"]:
+                    if req_url and req_url not in seen_urls:
+                        seen_urls.add(req_url)
                         iok_event["requests"].append(req_url)
         except Exception:
             pass
