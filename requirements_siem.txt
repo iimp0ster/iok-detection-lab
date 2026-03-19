@@ -7,7 +7,6 @@ PyYAML>=6.0
 
 # API Server
 flask>=2.3.0
-flask-cors>=3.0.0
 urllib3>=1.26.0
 
 # Elastic Integration (optional)
