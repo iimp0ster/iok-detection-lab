@@ -60,7 +60,8 @@ def collect_iok_data(url, timeout=10):
             "css": [],
             "cookies": [],
             "headers": [],
-            "requests": []
+            "requests": [],
+            "forms": []
         }
         
         # 1. Title
@@ -130,20 +131,59 @@ def collect_iok_data(url, timeout=10):
         # 8. Headers
         iok_event["headers"] = server_headers
         
-        # 9. Requests
+        # 9. Requests (structured as dicts)
         try:
             logs = driver.get_log('performance')
+            seen_urls = set()
             for log in logs:
                 message = json.loads(log['message'])
-                method = message.get('message', {}).get('method', '')
-                
-                if method == 'Network.requestWillBeSent':
-                    request_url = message['message']['params']['request']['url']
-                    if request_url not in iok_event["requests"]:
-                        iok_event["requests"].append(request_url)
+                msg_method = message.get('message', {}).get('method', '')
+
+                if msg_method == 'Network.requestWillBeSent':
+                    params = message['message']['params']
+                    req = params.get('request', {})
+                    request_url = req.get('url', '')
+                    http_method = req.get('method', 'GET')
+                    if request_url and request_url not in seen_urls:
+                        seen_urls.add(request_url)
+                        try:
+                            parsed = urlparse(request_url)
+                            iok_event["requests"].append({
+                                "url": request_url,
+                                "method": http_method,
+                                "host": parsed.netloc,
+                                "path": parsed.path
+                            })
+                        except Exception:
+                            iok_event["requests"].append({
+                                "url": request_url,
+                                "method": http_method,
+                                "host": "",
+                                "path": ""
+                            })
         except:
             pass
-        
+
+        # 10. Forms
+        try:
+            forms = driver.find_elements(By.TAG_NAME, "form")
+            for form in forms:
+                action = form.get_attribute("action") or ""
+                method = (form.get_attribute("method") or "GET").upper()
+                inputs = form.find_elements(By.TAG_NAME, "input")
+                fields = []
+                for inp in inputs:
+                    name = inp.get_attribute("name")
+                    if name:
+                        fields.append(name)
+                iok_event["forms"].append({
+                    "action": action,
+                    "method": method,
+                    "fields": fields
+                })
+        except:
+            pass
+
         return iok_event
         
     except Exception as e:
